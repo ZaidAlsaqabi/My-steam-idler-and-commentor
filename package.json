@@ -1,0 +1,18 @@
+{
+  "name": "steam-bot",
+  "version": "1.0.0",
+  "description": "Steam bot for auto group commenting and game idling",
+  "main": "bot.js",
+  "scripts": {
+    "install-bot": "bash ./util/install.sh",
+    "configure-bot": "node ./util/configure",
+    "start-bot": "node ./bot"
+  },
+  "dependencies": {
+    "steamcommunity": "^3.45.0",
+    "node-telegram-bot-api": "^0.61.0",
+    "node-fetch": "^2.6.7",
+    "steam-user": "^4.25.0",
+    "prompt-sync": "^4.2.0"
+  }
+}
