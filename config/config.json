@@ -11,25 +11,34 @@
     "password": null,
     "groups": [
         "noob",
-        "plus-rep",
-        "zzz",
-        "imaprettygirl",
-        "hax",
-        "myanimelist",
-        "BAKA",
-        "HaveMoreFriends",
-        "zettai_ryouiki",
+        "wqerqrrrrrrrrrrrrrrrrrrrrr",
         "osugame",
         "pcgamer",
-        "Anime4Life",
-        "wqerqrrrrrrrrrrrrrrrrrrrrr",
         "hentaii",
-        "erotic"
+        "plus-rep",
+        "hax",
+        "erotic",
+        "myanimelist",
+        "HaveMoreFriends",
+        "Anime4Life",
+        "zzz",
+        "BAKA",
+        "zettai_ryouiki",
+        "imaprettygirl"
     ],
     "features": {
         "auto_group_comment": true,
         "idle_games": false,
-        "idle_multiple_games": false
+        "idle_multiple_games": false,
+        "use_saved_games": true,
+        "auto_accept_friends": true
+    },
+    "saved_games": {
+        "single_game": 440,
+        "multiple_games": [
+            990080,
+            440
+        ]
     },
     "games_to_idle": []
 }

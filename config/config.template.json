@@ -13,7 +13,13 @@
     "features": {
         "auto_group_comment": true,
         "idle_games": false,
-        "idle_multiple_games": false
+        "idle_multiple_games": false,
+        "use_saved_games": false,
+        "auto_accept_friends": false
+    },
+    "saved_games": {
+        "single_game": 730,
+        "multiple_games": [730, 440, 570]
     },
     "games_to_idle": []
 }

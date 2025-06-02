@@ -80,10 +80,12 @@ function showMenu() {
     console.log("3. Idle Multiple Games");
     console.log("4. Run Both (Auto Comment + Idle)");
     console.log("5. Stop Idling (if active)");
-    console.log("6. Exit");
+    console.log("6. Configure Saved Games");
+    console.log("7. Configure Friend Requests");
+    console.log("8. Exit");
     console.log("\nPress 'M' at any time to return to this menu");
     
-    rl.question("\nSelect an option (1-6): ", function(choice) {
+    rl.question("\nSelect an option (1-8): ", function(choice) {
         switch(choice) {
             case "1":
                 config.features.auto_group_comment = true;
@@ -95,33 +97,57 @@ function showMenu() {
                 config.features.auto_group_comment = false;
                 config.features.idle_games = true;
                 config.features.idle_multiple_games = false;
-                rl.question("Enter the AppID of the game to idle: ", function(appId) {
-                    config.games_to_idle = [parseInt(appId)];
+                if (config.features.use_saved_games && config.saved_games.single_game) {
+                    console.log(`Using saved single game: ${config.saved_games.single_game}`);
+                    config.games_to_idle = [config.saved_games.single_game];
                     startBot();
-                });
+                } else {
+                    rl.question("Enter the AppID of the game to idle: ", function(appId) {
+                        config.games_to_idle = [parseInt(appId)];
+                        startBot();
+                    });
+                }
                 break;
             case "3":
                 config.features.auto_group_comment = false;
                 config.features.idle_games = false;
                 config.features.idle_multiple_games = true;
-                rl.question("Enter AppIDs separated by commas: ", function(appIds) {
-                    config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
+                if (config.features.use_saved_games && config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
+                    console.log(`Using saved multiple games: ${config.saved_games.multiple_games.join(', ')}`);
+                    config.games_to_idle = config.saved_games.multiple_games;
                     startBot();
-                });
+                } else {
+                    rl.question("Enter AppIDs separated by commas: ", function(appIds) {
+                        config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
+                        startBot();
+                    });
+                }
                 break;
             case "4":
                 config.features.auto_group_comment = true;
                 config.features.idle_games = true;
                 config.features.idle_multiple_games = true;
-                rl.question("Enter AppIDs separated by commas: ", function(appIds) {
-                    config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
+                if (config.features.use_saved_games && config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
+                    console.log(`Using saved multiple games: ${config.saved_games.multiple_games.join(', ')}`);
+                    config.games_to_idle = config.saved_games.multiple_games;
                     startBot();
-                });
+                } else {
+                    rl.question("Enter AppIDs separated by commas: ", function(appIds) {
+                        config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
+                        startBot();
+                    });
+                }
                 break;
             case "5":
                 stopIdling();
                 break;
             case "6":
+                configureSavedGames();
+                break;
+            case "7":
+                configureFriendRequests();
+                break;
+            case "8":
                 console.log("Exiting...");
                 process.exit(0);
                 break;
@@ -134,11 +160,11 @@ function showMenu() {
 
 function startBot() {
     if (config.username && config.password) {
-        console.log("Starting authentication for " + config.username + "...");
-        doLogin(config.username, config.password);
-    } else {
-        console.log("Invalid config for user " + config.username);
-    }
+	console.log("Starting authentication for " + config.username + "...");
+	doLogin(config.username, config.password);
+} else {
+	console.log("Invalid config for user " + config.username);
+}
 }
 
 // Add global variables for idling tracking
@@ -206,7 +232,53 @@ function displayIdleStatus() {
     process.stdout.write(statusText);
 }
 
-// Modify startIdling function
+// Add function to get user profile info
+async function getUserProfileInfo(steamID) {
+    try {
+        const response = await fetch(`https://steamcommunity.com/profiles/${steamID}/?xml=1`);
+        const text = await response.text();
+        const nameMatch = text.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/);
+        const avatarMatch = text.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/);
+        
+        return {
+            name: nameMatch ? nameMatch[1] : 'Unknown User',
+            avatar: avatarMatch ? avatarMatch[1] : null
+        };
+    } catch (error) {
+        console.log(`Error fetching profile for ${steamID}:`, error.message);
+        return { name: 'Unknown User', avatar: null };
+    }
+}
+
+// Modify handleFriendRequest function
+async function handleFriendRequest(steamID, callback) {
+    if (config.features.auto_accept_friends) {
+        try {
+            // Get user profile info
+            const userInfo = await getUserProfileInfo(steamID);
+            
+            steamUserInstance.addFriend(steamID, (err) => {
+                if (err) {
+                    console.log(`Failed to accept friend request from ${userInfo.name} (${steamID}): ${err}`);
+                    if (tgBot) {
+                        tgBot.sendMessage(config.tg_chat_id, `Failed to accept friend request from ${userInfo.name} (${steamID}): ${err}`);
+                    }
+                } else {
+                    console.log(`Accepted friend request from ${userInfo.name} (${steamID})`);
+                    if (tgBot) {
+                        tgBot.sendMessage(config.tg_chat_id, `Accepted friend request from ${userInfo.name} (${steamID})`);
+                    }
+                }
+                if (callback) callback(err);
+            });
+        } catch (error) {
+            console.log(`Error handling friend request from ${steamID}:`, error);
+            if (callback) callback(error);
+        }
+    }
+}
+
+// Modify startIdling function's friend request handler
 function startIdling(community) {
     if (isIdling) {
         console.log("Already idling games. Use option 5 to stop first.");
@@ -241,6 +313,22 @@ function startIdling(community) {
             console.log("\nIdle timer started. Press 'M' to return to menu.");
             idleTimer = setInterval(displayIdleStatus, 10000);
             displayIdleStatus(); // Initial display
+        });
+
+        // Add friend request handler
+        steamUserInstance.on('friendRelationship', async (steamID, relationship) => {
+            if (relationship === SteamUser.EFriendRelationship.RequestRecipient) {
+                try {
+                    const userInfo = await getUserProfileInfo(steamID);
+                    console.log(`Received friend request from ${userInfo.name} (${steamID})`);
+                    if (tgBot) {
+                        tgBot.sendMessage(config.tg_chat_id, `Received friend request from ${userInfo.name} (${steamID})`);
+                    }
+                    handleFriendRequest(steamID);
+                } catch (error) {
+                    console.log(`Error processing friend request from ${steamID}:`, error);
+                }
+            }
         });
 
         steamUserInstance.on('error', (err) => {
@@ -370,16 +458,16 @@ function doLogin(accountName, password, authCode, twoFactorCode, captcha) {
 
 			// Start group commenting if enabled
 			if (config.features.auto_group_comment) {
-				console.log("Starting group post interval...")
+			console.log("Starting group post interval...")
 
-				try {
-					run(community, config.interval, config.groups, config.message);
-				} catch (e) {
+			try {
+				run(community, config.interval, config.groups, config.message);
+			} catch (e) {
 					console.log("An error occurred in the run function: %j", e);
 					if (tgBot) {
 						tgBot.sendMessage(config.tg_chat_id, "Critical error occurred in the run function: %j" + String(e));
 					}
-					process.exit(1);
+				process.exit(1);
 				}
 			}
 
@@ -478,6 +566,164 @@ function run(community, interval, groups, message) {
 		i_id++;
 		return intervalFunc;
 	}(), interval * 1000);
+}
+
+// Add function to get a single game name
+async function getGameName(appId) {
+    try {
+        const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`);
+        const data = await response.json();
+        
+        if (data && data[appId] && data[appId].success && data[appId].data && data[appId].data.name) {
+            return data[appId].data.name;
+        } else {
+            throw new Error('Game not found');
+        }
+    } catch (error) {
+        console.log(`Error fetching game name for ${appId}:`, error.message);
+        throw error;
+    }
+}
+
+// Add function to configure saved games
+async function configureSavedGames() {
+    console.log("\n=== Configure Saved Games ===");
+    console.log("1. Set Single Game");
+    console.log("2. Set Multiple Games");
+    console.log("3. Toggle Use Saved Games");
+    console.log("4. View Current Settings");
+    console.log("5. Return to Main Menu");
+
+    rl.question("\nSelect an option: ", async function(choice) {
+        switch(choice) {
+            case "1":
+                rl.question("Enter the AppID of the game to idle (e.g. 730 for CS2): ", async function(appId) {
+                    const gameId = parseInt(appId);
+                    try {
+                        const gameName = await getGameName(gameId);
+                        console.log(`\nGame found: ${gameName} (AppID: ${gameId})`);
+                        config.saved_games.single_game = gameId;
+                        saveConfig();
+                        console.log("Single game saved successfully!");
+                    } catch (error) {
+                        console.log(`Error: Could not find game with AppID ${gameId}`);
+                    }
+                    configureSavedGames();
+                });
+                break;
+            case "2":
+                rl.question("Enter AppIDs separated by commas (e.g. 730,440,570): ", async function(appIds) {
+                    const gameIds = appIds.split(',').map(id => parseInt(id.trim()));
+                    console.log("\nFetching game names...");
+                    try {
+                        const gameNames = await Promise.all(gameIds.map(async (id) => {
+                            try {
+                                const name = await getGameName(id);
+                                return `${name} (${id})`;
+                            } catch (error) {
+                                return `Unknown Game (${id})`;
+                            }
+                        }));
+                        console.log("\nGames found:");
+                        gameNames.forEach(name => console.log(`- ${name}`));
+                        config.saved_games.multiple_games = gameIds;
+                        saveConfig();
+                        console.log("\nMultiple games saved successfully!");
+                    } catch (error) {
+                        console.log("Error: Could not fetch some game names");
+                    }
+                    configureSavedGames();
+                });
+                break;
+            case "3":
+                config.features.use_saved_games = !config.features.use_saved_games;
+                saveConfig();
+                console.log(`Use saved games is now ${config.features.use_saved_games ? 'enabled' : 'disabled'}`);
+                configureSavedGames();
+                break;
+            case "4":
+                console.log("\nCurrent Saved Games Settings:");
+                console.log(`Use Saved Games: ${config.features.use_saved_games ? 'Enabled' : 'Disabled'}`);
+                
+                if (config.saved_games.single_game) {
+                    try {
+                        const singleGameName = await getGameName(config.saved_games.single_game);
+                        console.log(`Single Game: ${singleGameName} (AppID: ${config.saved_games.single_game})`);
+                    } catch (error) {
+                        console.log(`Single Game: Unknown Game (AppID: ${config.saved_games.single_game})`);
+                    }
+                } else {
+                    console.log("Single Game: Not set");
+                }
+
+                if (config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
+                    console.log("\nMultiple Games:");
+                    try {
+                        const gameNames = await Promise.all(config.saved_games.multiple_games.map(async (id) => {
+                            try {
+                                const name = await getGameName(id);
+                                return `${name} (${id})`;
+                            } catch (error) {
+                                return `Unknown Game (${id})`;
+                            }
+                        }));
+                        gameNames.forEach(name => console.log(`- ${name}`));
+                    } catch (error) {
+                        console.log("Error: Could not fetch some game names");
+                    }
+                } else {
+                    console.log("Multiple Games: Not set");
+                }
+                configureSavedGames();
+                break;
+            case "5":
+                showMenu();
+                break;
+            default:
+                console.log("Invalid option. Please try again.");
+                configureSavedGames();
+        }
+    });
+}
+
+// Add function to save config
+function saveConfig() {
+    try {
+        fs.writeFileSync('./config/config.json', JSON.stringify(config, null, 4));
+        console.log("Configuration saved successfully.");
+    } catch (error) {
+        console.log("Error saving configuration:", error);
+    }
+}
+
+// Add function to configure friend request settings
+function configureFriendRequests() {
+    console.log("\n=== Configure Friend Requests ===");
+    console.log("1. Toggle Auto-Accept Friend Requests");
+    console.log("2. View Current Settings");
+    console.log("3. Back to Main Menu");
+    
+    rl.question("\nSelect an option (1-3): ", function(choice) {
+        switch(choice) {
+            case "1":
+                config.features.auto_accept_friends = !config.features.auto_accept_friends;
+                console.log(`Auto-accept friend requests is now: ${config.features.auto_accept_friends ? 'enabled' : 'disabled'}`);
+                saveConfig();
+                configureFriendRequests();
+                break;
+            case "2":
+                console.log("\nCurrent Friend Request Settings:");
+                console.log(`Auto-Accept Friend Requests: ${config.features.auto_accept_friends ? 'Enabled' : 'Disabled'}`);
+                configureFriendRequests();
+                break;
+            case "3":
+                showMenu();
+                break;
+            default:
+                console.log("Invalid option. Please try again.");
+                configureFriendRequests();
+        }
+    });
 }
 
 // Modify the main execution to show menu first

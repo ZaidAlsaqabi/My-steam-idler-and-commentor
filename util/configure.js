@@ -150,6 +150,31 @@ function run(accountName, password, authCode, twoFactorCode, captcha) {
                         }
 
                         console.log("");
+                        const autoAcceptFriends = prompt("Would you like to enable auto-accept friend requests? (y/n): ");
+                        if (autoAcceptFriends == "y") {
+                            configTemplate.features.auto_accept_friends = true;
+                            console.log("Auto-accept friend requests enabled!");
+                        } else {
+                            configTemplate.features.auto_accept_friends = false;
+                            console.log("Auto-accept friend requests disabled.");
+                        }
+
+                        console.log("");
+                        const useSavedGames = prompt("Would you like to configure saved games for idling? (y/n): ");
+                        if (useSavedGames == "y") {
+                            configTemplate.features.use_saved_games = true;
+                            const singleGame = prompt("Enter a single game ID to idle (e.g. 730 for CS2): ");
+                            configTemplate.saved_games.single_game = parseInt(singleGame);
+                            
+                            const multipleGames = prompt("Enter multiple game IDs separated by commas (e.g. 730, 440, 570): ");
+                            configTemplate.saved_games.multiple_games = multipleGames.split(',').map(id => parseInt(id.trim()));
+                            console.log("Saved games configured successfully!");
+                        } else {
+                            configTemplate.features.use_saved_games = false;
+                            console.log("Saved games feature disabled.");
+                        }
+
+                        console.log("");
                         const advancedConfigure = prompt("Would you like to configure advanced options? (y/n): ");
                         if (advancedConfigure == "y") {
                             const interval = parseInt(prompt("Set interval (integer): "));
