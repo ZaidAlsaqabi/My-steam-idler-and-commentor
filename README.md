@@ -1,6 +1,7 @@
 # Steam Bot - Auto Group Commenter & Game Idler
 
-A powerful Steam bot that combines auto group commenting and game idling capabilities. Perfect for managing your Steam presence and group engagement.
+A powerful Steam bot that combines auto group commenting and game idling capabilities. Perfect for managing your Steam presence and group engagement. Made by darkjoyless, this tool is ultimately optimized well-designed to handle multi tasks
+and comments further feature are being added one being promising great with realtime updates will be adding auto message to direct messages, and auto friend add on future updates perhaps web control panel to manage the bot.
 
 ## Features
 
@@ -9,7 +10,7 @@ A powerful Steam bot that combines auto group commenting and game idling capabil
 - Configurable posting intervals
 - Anti-spam protection
 - Support for both local message files and Pastebin
-- Telegram notifications for monitoring
+- Soon a discord notification (Although working telegram configurer)
 - Automatic group joining (optional)
 
 ### Game Idling
@@ -31,6 +32,9 @@ A powerful Steam bot that combines auto group commenting and game idling capabil
 - A Steam account
 - (Optional) Telegram bot token and chat ID for notifications
 
+## Realtime secure steam login
+-Feature backend to the steam login service
+-Saves cookies for logining again for not to keep asking for steam
 ## Installation
 
 1. Clone the repository:
