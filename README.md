@@ -15,15 +15,18 @@ and comments further feature are being added one being promising great with real
 
 ### Game Idling
 - Idle single or multiple games simultaneously
+- Real-time idling timer display (updates every 10 seconds)
+- Automatic game name fetching from Steam API
 - Configurable status (Online, Away, Busy)
 - Easy start/stop functionality
 - Works alongside auto group commenting
 
 ### User Interface
 - Interactive menu system
-- Quick keyboard shortcuts
+- Quick keyboard shortcuts ('M' to return to menu)
 - Real-time status updates
 - Easy configuration through setup script
+- Live game idling timer with game names
 
 ## Prerequisites
 
@@ -35,6 +38,7 @@ and comments further feature are being added one being promising great with real
 ## Realtime secure steam login
 -Feature backend to the steam login service
 -Saves cookies for logining again for not to keep asking for steam
+
 ## Installation
 
 1. Clone the repository:
@@ -87,7 +91,7 @@ node bot.js
 
 2. Use the interactive menu:
 ```
-=== Steam Bot Menu ===
+=== Darkjoyless Steam Bot Menu ===
 1. Auto Group Commenter
 2. Idle Single Game
 3. Idle Multiple Games
@@ -98,37 +102,181 @@ node bot.js
 Press 'M' at any time to return to this menu
 ```
 
+### Game Idling Features
+- Real-time timer display showing idling duration
+- Automatic game name fetching from Steam API
+- Support for single or multiple games
+- Easy start/stop functionality
+- Works alongside auto group commenting
+
 ### Keyboard Shortcuts
 - `M`: Return to menu
 - `Ctrl+C`: Interrupt current operation
 
-### Running on VPS
+### Running on VPS (Ubuntu)
 
-1. Install Node.js on your VPS:
+1. Update system and install required packages:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt-get install -y nodejs
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y curl git build-essential
 ```
 
-2. Clone and setup the bot:
+2. Install Node.js (v16.x):
 ```bash
+# Remove any existing Node.js installation
+sudo apt remove nodejs npm -y
+sudo apt autoremove -y
+
+# Add NodeSource repository
+curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+
+# Install Node.js and npm
+sudo apt install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+```
+
+3. Install PM2 globally:
+```bash
+sudo npm install -g pm2
+```
+
+4. Clone and setup the bot:
+```bash
+# Clone the repository
 git clone https://github.com/yourusername/steam-bot.git
 cd steam-bot
+
+# Install dependencies
 npm install
+
+# Create config directory and files
+mkdir -p config
+touch config/config.json
+touch config/message.txt
+
+# Set up the bot
 node util/configure.js
 ```
 
-3. (Optional) Use PM2 to keep the bot running:
+5. Start the bot with PM2:
 ```bash
-npm install -g pm2
+# Start the bot
 pm2 start bot.js --name "steam-bot"
+
+# Make PM2 start on system boot
+pm2 startup
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp $HOME
+pm2 save
 ```
 
 PM2 Commands:
-- `pm2 status`: Check bot status
-- `pm2 logs steam-bot`: View logs
-- `pm2 restart steam-bot`: Restart bot
-- `pm2 stop steam-bot`: Stop bot
+```bash
+# Check bot status
+pm2 status
+
+# View logs
+pm2 logs steam-bot
+
+# View real-time logs
+pm2 logs steam-bot --lines 100 --raw
+
+# Restart bot
+pm2 restart steam-bot
+
+# Stop bot
+pm2 stop steam-bot
+
+# Delete bot from PM2
+pm2 delete steam-bot
+```
+
+6. (Optional) Set up automatic updates:
+```bash
+# Create update script
+cat > update-bot.sh << 'EOF'
+#!/bin/bash
+cd /path/to/steam-bot
+git pull
+npm install
+pm2 restart steam-bot
+EOF
+
+# Make it executable
+chmod +x update-bot.sh
+
+# Add to crontab (updates daily at 3 AM)
+(crontab -l 2>/dev/null; echo "0 3 * * * /path/to/steam-bot/update-bot.sh") | crontab -
+```
+
+7. (Optional) Set up log rotation:
+```bash
+# Install logrotate if not installed
+sudo apt install -y logrotate
+
+# Create logrotate configuration
+sudo nano /etc/logrotate.d/steam-bot
+
+# Add the following configuration
+/path/to/steam-bot/log.txt {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 $USER $USER
+}
+```
+
+8. (Optional) Set up firewall rules:
+```bash
+# Allow SSH (if not already allowed)
+sudo ufw allow ssh
+
+# Allow outbound connections (required for Steam API)
+sudo ufw allow out 80/tcp
+sudo ufw allow out 443/tcp
+
+# Enable firewall
+sudo ufw enable
+```
+
+9. Monitor system resources:
+```bash
+# Install monitoring tools
+sudo apt install -y htop
+
+# Monitor system resources
+htop
+
+# Check disk space
+df -h
+
+# Check memory usage
+free -h
+```
+
+10. Troubleshooting commands:
+```bash
+# Check bot logs
+pm2 logs steam-bot
+
+# Check system logs
+journalctl -u pm2-$USER
+
+# Check Node.js process
+ps aux | grep node
+
+# Check system resources
+top
+
+# Check network connections
+netstat -tulpn | grep node
+```
 
 ## Security Notes
 
@@ -153,6 +301,11 @@ PM2 Commands:
    - Check your internet connection
    - Verify Steam servers are online
    - Check VPS firewall settings
+
+4. **Game Name Fetching**
+   - If game names fail to fetch, the bot will use default names
+   - Check your internet connection if names aren't loading
+   - Steam API might be temporarily unavailable
 
 ### Logs
 
