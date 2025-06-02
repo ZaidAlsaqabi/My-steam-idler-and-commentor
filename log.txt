@@ -1,0 +1,82 @@
+> 2025-06-02T12:56:10.052Z: 
+=== Steam Bot Menu ===
+> 2025-06-02T12:56:10.053Z: 1. Auto Group Commenter
+> 2025-06-02T12:56:10.053Z: 2. Idle Single Game
+> 2025-06-02T12:56:10.053Z: 3. Idle Multiple Games
+> 2025-06-02T12:56:10.053Z: 4. Run Both (Auto Comment + Idle)
+> 2025-06-02T12:56:10.053Z: 5. Exit
+> 2025-06-02T12:56:28.888Z: Starting authentication for miisurecontcenleapar...
+> 2025-06-02T12:56:30.732Z: An email has been sent to your address at gmail.com
+> 2025-06-02T12:56:51.781Z: Logged on as miisurecontcenleapar...
+> 2025-06-02T13:00:01.110Z: 
+=== Steam Bot Menu ===
+> 2025-06-02T13:00:01.111Z: 1. Auto Group Commenter
+> 2025-06-02T13:00:01.111Z: 2. Idle Single Game
+> 2025-06-02T13:00:01.111Z: 3. Idle Multiple Games
+> 2025-06-02T13:00:01.111Z: 4. Run Both (Auto Comment + Idle)
+> 2025-06-02T13:00:01.111Z: 5. Exit
+> 2025-06-02T13:00:10.822Z: Starting authentication for miisurecontcenleapar...
+> 2025-06-02T13:00:12.815Z: An email has been sent to your address at gmail.com
+> 2025-06-02T13:00:30.530Z: Logged on as miisurecontcenleapar...
+> 2025-06-02T13:01:10.418Z: Logged into Steam for game idling
+> 2025-06-02T13:01:10.422Z: Idling game with AppID: 990080
+> 2025-06-02T13:06:00.375Z: 
+=== Steam Bot Menu ===
+> 2025-06-02T13:06:00.376Z: 1. Auto Group Commenter
+> 2025-06-02T13:06:00.376Z: 2. Idle Single Game
+> 2025-06-02T13:06:00.376Z: 3. Idle Multiple Games
+> 2025-06-02T13:06:00.376Z: 4. Run Both (Auto Comment + Idle)
+> 2025-06-02T13:06:00.376Z: 5. Stop Idling (if active)
+> 2025-06-02T13:06:00.376Z: 6. Exit
+> 2025-06-02T13:07:21.074Z: Starting authentication for miisurecontcenleapar...
+> 2025-06-02T13:07:23.036Z: An email has been sent to your address at gmail.com
+> 2025-06-02T13:07:42.430Z: Logged on as miisurecontcenleapar...
+> 2025-06-02T13:07:45.033Z: Logged into Steam for game idling
+> 2025-06-02T13:07:45.038Z: Idling 2 games: 990080, 440
+> 2025-06-02T13:10:22.785Z: 
+=== Steam Bot Menu ===
+> 2025-06-02T13:10:22.786Z: 1. Auto Group Commenter
+> 2025-06-02T13:10:22.786Z: 2. Idle Single Game
+> 2025-06-02T13:10:22.786Z: 3. Idle Multiple Games
+> 2025-06-02T13:10:22.786Z: 4. Run Both (Auto Comment + Idle)
+> 2025-06-02T13:10:22.786Z: 5. Stop Idling (if active)
+> 2025-06-02T13:10:22.786Z: 6. Exit
+> 2025-06-02T13:10:22.786Z: 
+Press 'M' at any time to return to this menu
+> 2025-06-02T13:10:26.573Z: No active game idling session found.
+> 2025-06-02T13:10:26.573Z: 
+=== Steam Bot Menu ===
+> 2025-06-02T13:10:26.573Z: 1. Auto Group Commenter
+> 2025-06-02T13:10:26.573Z: 2. Idle Single Game
+> 2025-06-02T13:10:26.574Z: 3. Idle Multiple Games
+> 2025-06-02T13:10:26.574Z: 4. Run Both (Auto Comment + Idle)
+> 2025-06-02T13:10:26.574Z: 5. Stop Idling (if active)
+> 2025-06-02T13:10:26.574Z: 6. Exit
+> 2025-06-02T13:10:26.574Z: 
+Press 'M' at any time to return to this menu
+> 2025-06-02T13:10:33.937Z: No active game idling session found.
+> 2025-06-02T13:10:33.937Z: 
+=== Steam Bot Menu ===
+> 2025-06-02T13:10:33.937Z: 1. Auto Group Commenter
+> 2025-06-02T13:10:33.938Z: 2. Idle Single Game
+> 2025-06-02T13:10:33.938Z: 3. Idle Multiple Games
+> 2025-06-02T13:10:33.938Z: 4. Run Both (Auto Comment + Idle)
+> 2025-06-02T13:10:33.938Z: 5. Stop Idling (if active)
+> 2025-06-02T13:10:33.938Z: 6. Exit
+> 2025-06-02T13:10:33.938Z: 
+Press 'M' at any time to return to this menu
+> 2025-06-02T13:10:50.380Z: Starting authentication for miisurecontcenleapar...
+> 2025-06-02T13:10:52.572Z: An email has been sent to your address at gmail.com
+> 2025-06-02T13:11:09.888Z: Logged on as miisurecontcenleapar...
+> 2025-06-02T13:11:09.889Z: Starting group post interval...
+> 2025-06-02T13:11:09.890Z: Posting to 15 group(s) on interval 0
+> 2025-06-02T13:11:09.890Z: 
+Running both features:
+> 2025-06-02T13:11:09.890Z: - Auto Group Commenter: Active
+> 2025-06-02T13:11:09.890Z: - Game Idling: Active
+> 2025-06-02T13:11:09.890Z: Use option 5 in the menu to stop idling at any time.
+> 2025-06-02T13:11:11.507Z: Comment posted on group: noob at 6/2/2025, 4:11:11 PM
+> 2025-06-02T13:11:13.426Z: Logged into Steam for game idling
+> 2025-06-02T13:11:13.430Z: Idling 2 games: 440, 990080
+> 2025-06-02T13:11:31.284Z: Comment posted on group: +rep at 6/2/2025, 4:11:31 PM
+> 2025-06-02T13:11:51.209Z: Comment posted on group: zzz at 6/2/2025, 4:11:51 PM
