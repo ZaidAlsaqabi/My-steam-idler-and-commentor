@@ -74,7 +74,7 @@ process.stdin.on('keypress', (str, key) => {
 
 // Add new menu system
 function showMenu() {
-    console.log("\n=== Steam Bot Menu ===");
+    console.log("\n=== Darkjoyless Steam Bot Menu ===");
     console.log("1. Auto Group Commenter");
     console.log("2. Idle Single Game");
     console.log("3. Idle Multiple Games");
@@ -141,11 +141,72 @@ function startBot() {
     }
 }
 
-// Add global variable to track the Steam user instance
+// Add global variables for idling tracking
 let steamUserInstance = null;
 let isIdling = false;
+let idleStartTime = null;
+let idleTimer = null;
+let gameNames = new Map(); // Store game names for display
 
-// Add game idling functionality
+// Add function to get game names from Steam API
+async function getGameNames(appIds) {
+    try {
+        // Make individual requests for each game to avoid rate limiting
+        for (const appId of appIds) {
+            try {
+                const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`);
+                const data = await response.json();
+                
+                if (data && data[appId] && data[appId].success && data[appId].data && data[appId].data.name) {
+                    gameNames.set(appId, data[appId].data.name);
+                    console.log(`Successfully fetched name for game ${appId}: ${data[appId].data.name}`);
+                } else {
+                    console.log(`Could not fetch name for game ${appId}, using default name`);
+                    gameNames.set(appId, `Game (${appId})`);
+                }
+                
+                // Add a small delay between requests to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (err) {
+                console.log(`Error processing game ${appId}:`, err.message);
+                gameNames.set(appId, `Game (${appId})`);
+            }
+        }
+    } catch (error) {
+        console.log("Error in getGameNames:", error.message);
+        // Set default names if API fails
+        for (const appId of appIds) {
+            gameNames.set(appId, `Game (${appId})`);
+        }
+    }
+}
+
+// Add function to display idle status
+function displayIdleStatus() {
+    if (!isIdling || !idleStartTime) return;
+
+    const now = new Date();
+    const diff = now - idleStartTime;
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+
+    // Clear the current line
+    process.stdout.write('\r\x1b[K');
+    
+    // Display idle status
+    let statusText = `Idling for: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} | Games: `;
+    
+    if (config.features.idle_multiple_games) {
+        statusText += config.games_to_idle.map(id => gameNames.get(id) || `Game (${id})`).join(', ');
+    } else {
+        statusText += gameNames.get(config.games_to_idle[0]) || `Game (${config.games_to_idle[0]})`;
+    }
+    
+    process.stdout.write(statusText);
+}
+
+// Modify startIdling function
 function startIdling(community) {
     if (isIdling) {
         console.log("Already idling games. Use option 5 to stop first.");
@@ -154,45 +215,67 @@ function startIdling(community) {
 
     steamUserInstance = new SteamUser();
     isIdling = true;
+    idleStartTime = new Date();
     
-    steamUserInstance.logOn({
-        accountName: config.username,
-        password: config.password
-    });
+    // Get game names before starting idling
+    getGameNames(config.games_to_idle).then(() => {
+        steamUserInstance.logOn({
+            accountName: config.username,
+            password: config.password
+        });
 
-    steamUserInstance.on('loggedOn', () => {
-        console.log("Logged into Steam for game idling");
-        
-        if (config.features.idle_multiple_games) {
-            steamUserInstance.setPersona(SteamUser.EPersonaState.Online);
-            steamUserInstance.gamesPlayed(config.games_to_idle);
-            console.log(`Idling ${config.games_to_idle.length} games: ${config.games_to_idle.join(', ')}`);
-        } else if (config.features.idle_games) {
-            steamUserInstance.setPersona(SteamUser.EPersonaState.Online);
-            steamUserInstance.gamesPlayed(config.games_to_idle[0]);
-            console.log(`Idling game with AppID: ${config.games_to_idle[0]}`);
-        }
-    });
+        steamUserInstance.on('loggedOn', () => {
+            console.log("Logged into Steam for game idling");
+            
+            if (config.features.idle_multiple_games) {
+                steamUserInstance.setPersona(SteamUser.EPersonaState.Online);
+                steamUserInstance.gamesPlayed(config.games_to_idle);
+                console.log(`Idling ${config.games_to_idle.length} games: ${config.games_to_idle.map(id => gameNames.get(id) || `Game (${id})`).join(', ')}`);
+            } else if (config.features.idle_games) {
+                steamUserInstance.setPersona(SteamUser.EPersonaState.Online);
+                steamUserInstance.gamesPlayed(config.games_to_idle[0]);
+                console.log(`Idling game: ${gameNames.get(config.games_to_idle[0]) || `Game (${config.games_to_idle[0]})`}`);
+            }
 
-    steamUserInstance.on('error', (err) => {
-        console.log("Error during game idling:", err);
-        isIdling = false;
-    });
+            // Start the idle timer display
+            console.log("\nIdle timer started. Press 'M' to return to menu.");
+            idleTimer = setInterval(displayIdleStatus, 10000);
+            displayIdleStatus(); // Initial display
+        });
 
-    steamUserInstance.on('loggedOff', () => {
-        console.log("Steam session ended");
-        isIdling = false;
+        steamUserInstance.on('error', (err) => {
+            console.log("\nError during game idling:", err);
+            isIdling = false;
+            if (idleTimer) {
+                clearInterval(idleTimer);
+                idleTimer = null;
+            }
+        });
+
+        steamUserInstance.on('loggedOff', () => {
+            console.log("\nSteam session ended");
+            isIdling = false;
+            if (idleTimer) {
+                clearInterval(idleTimer);
+                idleTimer = null;
+            }
+        });
     });
 }
 
-// Add function to stop idling
+// Modify stopIdling function
 function stopIdling() {
     if (steamUserInstance && isIdling) {
-        console.log("Stopping game idling...");
+        console.log("\nStopping game idling...");
+        if (idleTimer) {
+            clearInterval(idleTimer);
+            idleTimer = null;
+        }
         steamUserInstance.gamesPlayed([]); // Stop playing games
         steamUserInstance.logOff();
         steamUserInstance = null;
         isIdling = false;
+        idleStartTime = null;
         console.log("Game idling stopped successfully.");
     } else {
         console.log("No active game idling session found.");
