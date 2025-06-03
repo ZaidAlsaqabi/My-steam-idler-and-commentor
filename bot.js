@@ -65,114 +65,27 @@ if (process.stdin.isTTY) {
     process.stdin.setRawMode(true);
 }
 
+let isEnteringSteamGuard = false;
+
 process.stdin.on('keypress', (str, key) => {
     if (key.name === 'm' || key.name === 'M') {
-        console.log("\nReturning to menu...");
-        showMenu();
+        if (!isEnteringSteamGuard) {
+            console.log("\nReturning to menu...");
+            showMenu();
+        }
     }
 });
 
-// Add new menu system
-function showMenu() {
-    console.log("\n=== Darkjoyless Steam Bot Menu ===");
-    console.log("1. Auto Group Commenter");
-    console.log("2. Idle Single Game");
-    console.log("3. Idle Multiple Games");
-    console.log("4. Run Both (Auto Comment + Idle)");
-    console.log("5. Stop Idling (if active)");
-    console.log("6. Configure Saved Games");
-    console.log("7. Configure Friend Requests");
-    console.log("8. Exit");
-    console.log("\nPress 'M' at any time to return to this menu");
-    
-    rl.question("\nSelect an option (1-8): ", function(choice) {
-        switch(choice) {
-            case "1":
-                config.features.auto_group_comment = true;
-                config.features.idle_games = false;
-                config.features.idle_multiple_games = false;
-                startBot();
-                break;
-            case "2":
-                config.features.auto_group_comment = false;
-                config.features.idle_games = true;
-                config.features.idle_multiple_games = false;
-                if (config.features.use_saved_games && config.saved_games.single_game) {
-                    console.log(`Using saved single game: ${config.saved_games.single_game}`);
-                    config.games_to_idle = [config.saved_games.single_game];
-                    startBot();
-                } else {
-                    rl.question("Enter the AppID of the game to idle: ", function(appId) {
-                        config.games_to_idle = [parseInt(appId)];
-                        startBot();
-                    });
-                }
-                break;
-            case "3":
-                config.features.auto_group_comment = false;
-                config.features.idle_games = false;
-                config.features.idle_multiple_games = true;
-                if (config.features.use_saved_games && config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
-                    console.log(`Using saved multiple games: ${config.saved_games.multiple_games.join(', ')}`);
-                    config.games_to_idle = config.saved_games.multiple_games;
-                    startBot();
-                } else {
-                    rl.question("Enter AppIDs separated by commas: ", function(appIds) {
-                        config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
-                        startBot();
-                    });
-                }
-                break;
-            case "4":
-                config.features.auto_group_comment = true;
-                config.features.idle_games = true;
-                config.features.idle_multiple_games = true;
-                if (config.features.use_saved_games && config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
-                    console.log(`Using saved multiple games: ${config.saved_games.multiple_games.join(', ')}`);
-                    config.games_to_idle = config.saved_games.multiple_games;
-                    startBot();
-                } else {
-                    rl.question("Enter AppIDs separated by commas: ", function(appIds) {
-                        config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
-                        startBot();
-                    });
-                }
-                break;
-            case "5":
-                stopIdling();
-                break;
-            case "6":
-                configureSavedGames();
-                break;
-            case "7":
-                configureFriendRequests();
-                break;
-            case "8":
-                console.log("Exiting...");
-                process.exit(0);
-                break;
-            default:
-                console.log("Invalid option. Please try again.");
-                showMenu();
-        }
-    });
-}
-
-function startBot() {
-    if (config.username && config.password) {
-	console.log("Starting authentication for " + config.username + "...");
-	doLogin(config.username, config.password);
-} else {
-	console.log("Invalid config for user " + config.username);
-}
-}
-
 // Add global variables for idling tracking
 let steamUserInstance = null;
+let communityInstance = null;
 let isIdling = false;
 let idleStartTime = null;
 let idleTimer = null;
-let gameNames = new Map(); // Store game names for display
+let gameNames = new Map();
+let statusLines = [];
+const MAX_STATUS_LINES = 5;
+let isMenuActive = false; // Add flag to track menu state
 
 // Add function to get game names from Steam API
 async function getGameNames(appIds) {
@@ -207,7 +120,7 @@ async function getGameNames(appIds) {
     }
 }
 
-// Add function to display idle status
+// Modify displayIdleStatus function
 function displayIdleStatus() {
     if (!isIdling || !idleStartTime) return;
 
@@ -217,11 +130,8 @@ function displayIdleStatus() {
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
 
-    // Clear the current line
-    process.stdout.write('\r\x1b[K');
-    
-    // Display idle status
-    let statusText = `Idling for: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} | Games: `;
+    // Create status line
+    let statusText = `⏱️ ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} | 🎮 `;
     
     if (config.features.idle_multiple_games) {
         statusText += config.games_to_idle.map(id => gameNames.get(id) || `Game (${id})`).join(', ');
@@ -229,7 +139,15 @@ function displayIdleStatus() {
         statusText += gameNames.get(config.games_to_idle[0]) || `Game (${config.games_to_idle[0]})`;
     }
     
-    process.stdout.write(statusText);
+    statusText += ` | 👤 ${config.online_status}`;
+
+    // Only update display if menu is not active
+    if (!isMenuActive) {
+        // Clear the current line and move cursor to start
+        process.stdout.write('\r\x1b[K');
+        // Display the status
+        process.stdout.write(statusText);
+    }
 }
 
 // Add function to get user profile info
@@ -256,29 +174,130 @@ async function handleFriendRequest(steamID, callback) {
         try {
             // Get user profile info
             const userInfo = await getUserProfileInfo(steamID);
+            const timestamp = new Date().toLocaleString();
             
             steamUserInstance.addFriend(steamID, (err) => {
                 if (err) {
-                    console.log(`Failed to accept friend request from ${userInfo.name} (${steamID}): ${err}`);
+                    console.log(`[${timestamp}] Failed to accept friend request from ${userInfo.name} (${steamID}): ${err}`);
                     if (tgBot) {
-                        tgBot.sendMessage(config.tg_chat_id, `Failed to accept friend request from ${userInfo.name} (${steamID}): ${err}`);
+                        tgBot.sendMessage(config.tg_chat_id, `[${timestamp}] Failed to accept friend request from ${userInfo.name} (${steamID}): ${err}`);
                     }
                 } else {
-                    console.log(`Accepted friend request from ${userInfo.name} (${steamID})`);
+                    console.log(`[${timestamp}] Accepted friend request from ${userInfo.name} (${steamID})`);
                     if (tgBot) {
-                        tgBot.sendMessage(config.tg_chat_id, `Accepted friend request from ${userInfo.name} (${steamID})`);
+                        tgBot.sendMessage(config.tg_chat_id, `[${timestamp}] Accepted friend request from ${userInfo.name} (${steamID})`);
                     }
                 }
                 if (callback) callback(err);
             });
         } catch (error) {
-            console.log(`Error handling friend request from ${steamID}:`, error);
+            console.log(`[${new Date().toLocaleString()}] Error handling friend request from ${steamID}:`, error);
             if (callback) callback(error);
         }
     }
 }
 
-// Modify startIdling function's friend request handler
+// Modify updateOnlineStatus function
+function updateOnlineStatus() {
+    const statusMap = {
+        "Online": SteamUser.EPersonaState.Online,
+        "Invisible": SteamUser.EPersonaState.Invisible
+    };
+    
+    const status = statusMap[config.online_status] || SteamUser.EPersonaState.Online;
+    
+    // Update status for idling session if active
+    if (steamUserInstance && isIdling) {
+        steamUserInstance.setPersona(status);
+        console.log(`Updated idling session status to: ${config.online_status}`);
+    }
+    
+    // Update status for commenting session if active
+    if (communityInstance && config.features.auto_group_comment) {
+        communityInstance.setPersona(status);
+        console.log(`Updated commenting session status to: ${config.online_status}`);
+    }
+}
+
+// Modify configureOnlineStatus function
+function configureOnlineStatus() {
+    console.log("\n=== Configure Online Status ===");
+    console.log("Current Status:", config.online_status);
+    console.log("\n1. Set to Online");
+    console.log("2. Set to Invisible");
+    console.log("3. Return to Main Menu");
+    
+    rl.question("\nSelect an option (1-3): ", function(choice) {
+        switch(choice) {
+            case "1":
+                config.online_status = "Online";
+                saveConfig();
+                console.log("Status set to: Online");
+                updateOnlineStatus(); // Update status in real-time
+                configureOnlineStatus();
+                break;
+            case "2":
+                config.online_status = "Invisible";
+                saveConfig();
+                console.log("Status set to: Invisible");
+                updateOnlineStatus(); // Update status in real-time
+                configureOnlineStatus();
+                break;
+            case "3":
+                showMenu();
+                break;
+            default:
+                console.log("Invalid option. Please try again.");
+                configureOnlineStatus();
+        }
+    });
+}
+
+// Modify checkIdleStatus function
+function checkIdleStatus() {
+    if (!isIdling) {
+        console.log("\nNo active idling session.");
+        showMenu();
+        return;
+    }
+
+    isMenuActive = true; // Prevent main status updates while showing menu
+    console.log("\n=== Current Idle Status ===");
+    console.log("Press Enter to return to menu...");
+    
+    // Create a separate timer for status updates in check mode
+    const checkTimer = setInterval(() => {
+        const now = new Date();
+        const diff = now - idleStartTime;
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+
+        let statusText = `⏱️ ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} | 🎮 `;
+        
+        if (config.features.idle_multiple_games) {
+            statusText += config.games_to_idle.map(id => gameNames.get(id) || `Game (${id})`).join(', ');
+        } else {
+            statusText += gameNames.get(config.games_to_idle[0]) || `Game (${config.games_to_idle[0]})`;
+        }
+        
+        statusText += ` | 👤 ${config.online_status}`;
+        
+        // Clear previous status line and show new one
+        process.stdout.write('\r\x1b[K');
+        process.stdout.write(statusText);
+    }, 1000);
+
+    // Wait for Enter key
+    rl.question("", function() {
+        clearInterval(checkTimer); // Stop the check timer
+        isMenuActive = false;
+        displayIdleStatus(); // Restore main status display
+        showMenu();
+    });
+}
+
+// Modify startIdling function
 function startIdling(community) {
     if (isIdling) {
         console.log("Already idling games. Use option 5 to stop first.");
@@ -288,6 +307,7 @@ function startIdling(community) {
     steamUserInstance = new SteamUser();
     isIdling = true;
     idleStartTime = new Date();
+    isMenuActive = false;
     
     // Get game names before starting idling
     getGameNames(config.games_to_idle).then(() => {
@@ -298,20 +318,20 @@ function startIdling(community) {
 
         steamUserInstance.on('loggedOn', () => {
             console.log("Logged into Steam for game idling");
+            updateOnlineStatus();
             
             if (config.features.idle_multiple_games) {
-                steamUserInstance.setPersona(SteamUser.EPersonaState.Online);
                 steamUserInstance.gamesPlayed(config.games_to_idle);
                 console.log(`Idling ${config.games_to_idle.length} games: ${config.games_to_idle.map(id => gameNames.get(id) || `Game (${id})`).join(', ')}`);
             } else if (config.features.idle_games) {
-                steamUserInstance.setPersona(SteamUser.EPersonaState.Online);
                 steamUserInstance.gamesPlayed(config.games_to_idle[0]);
                 console.log(`Idling game: ${gameNames.get(config.games_to_idle[0]) || `Game (${config.games_to_idle[0]})`}`);
             }
 
             // Start the idle timer display
             console.log("\nIdle timer started. Press 'M' to return to menu.");
-            idleTimer = setInterval(displayIdleStatus, 10000);
+            console.log(""); // Add one empty line for status display
+            idleTimer = setInterval(displayIdleStatus, 1000);
             displayIdleStatus(); // Initial display
         });
 
@@ -320,13 +340,14 @@ function startIdling(community) {
             if (relationship === SteamUser.EFriendRelationship.RequestRecipient) {
                 try {
                     const userInfo = await getUserProfileInfo(steamID);
-                    console.log(`Received friend request from ${userInfo.name} (${steamID})`);
+                    const timestamp = new Date().toLocaleString();
+                    console.log(`[${timestamp}] Received friend request from ${userInfo.name} (${steamID})`);
                     if (tgBot) {
-                        tgBot.sendMessage(config.tg_chat_id, `Received friend request from ${userInfo.name} (${steamID})`);
+                        tgBot.sendMessage(config.tg_chat_id, `[${timestamp}] Received friend request from ${userInfo.name} (${steamID})`);
                     }
                     handleFriendRequest(steamID);
                 } catch (error) {
-                    console.log(`Error processing friend request from ${steamID}:`, error);
+                    console.log(`[${new Date().toLocaleString()}] Error processing friend request from ${steamID}:`, error);
                 }
             }
         });
@@ -359,6 +380,8 @@ function stopIdling() {
             clearInterval(idleTimer);
             idleTimer = null;
         }
+        // Clear the status line
+        process.stdout.write('\r\x1b[K');
         steamUserInstance.gamesPlayed([]); // Stop playing games
         steamUserInstance.logOff();
         steamUserInstance = null;
@@ -373,113 +396,142 @@ function stopIdling() {
 
 // Modify the existing doLogin function to handle both features
 function doLogin(accountName, password, authCode, twoFactorCode, captcha) {
-	let community = new SteamCommunity();
+    communityInstance = new SteamCommunity();
 
-	community.login({
-		"accountName": accountName,
-		"password": password,
-		"authCode": authCode,
-		"twoFactorCode": twoFactorCode,
-		"captcha": captcha
-	}, function (err) { // , sessionID, cookies, steamguard
-		if (err) {
-			if (err.message == 'SteamGuardMobile') {
-				rl.question("Steam Authenticator Code: ", function (code) {
-					doLogin(accountName, password, null, code);
-				});
+    communityInstance.login({
+        "accountName": accountName,
+        "password": password,
+        "authCode": authCode,
+        "twoFactorCode": twoFactorCode,
+        "captcha": captcha
+    }, function (err) {
+        if (err) {
+            if (err.message == 'SteamGuardMobile') {
+                isEnteringSteamGuard = true;
+                rl.question("Steam Authenticator Code: ", function (code) {
+                    isEnteringSteamGuard = false;
+                    doLogin(accountName, password, null, code);
+                });
+                return;
+            }
 
-				return;
-			}
+            if (err.message == 'SteamGuard') {
+                isEnteringSteamGuard = true;
+                console.log("An email has been sent to your address at " + err.emaildomain);
+                rl.question("Steam Guard Code: ", function (code) {
+                    isEnteringSteamGuard = false;
+                    doLogin(accountName, password, code);
+                });
+                return;
+            }
 
-			if (err.message == 'SteamGuard') {
-				console.log("An email has been sent to your address at " + err.emaildomain);
-				rl.question("Steam Guard Code: ", function (code) {
-					doLogin(accountName, password, code);
-				});
+            if (err.message == 'CAPTCHA') {
+                isEnteringSteamGuard = true;
+                console.log(err.captchaurl);
+                rl.question("CAPTCHA: ", function (captchaInput) {
+                    isEnteringSteamGuard = false;
+                    doLogin(accountName, password, authCode, twoFactorCode, captchaInput);
+                });
+                return;
+            }
 
-				return;
-			}
+            // Handle incorrect Steam Guard code
+            if (err.message.includes('Invalid Steam Guard code')) {
+                console.log("\n❌ Incorrect Steam Guard code. Please try again.");
+                isEnteringSteamGuard = true;
+                rl.question("Steam Guard Code: ", function (code) {
+                    isEnteringSteamGuard = false;
+                    doLogin(accountName, password, code);
+                });
+                return;
+            }
 
-			if (err.message == 'CAPTCHA') {
-				console.log(err.captchaurl);
-				rl.question("CAPTCHA: ", function (captchaInput) {
-					doLogin(accountName, password, authCode, twoFactorCode, captchaInput);
-				});
+            // Handle incorrect Mobile Authenticator code
+            if (err.message.includes('Invalid two-factor code')) {
+                console.log("\n❌ Incorrect Mobile Authenticator code. Please try again.");
+                isEnteringSteamGuard = true;
+                rl.question("Steam Authenticator Code: ", function (code) {
+                    isEnteringSteamGuard = false;
+                    doLogin(accountName, password, null, code);
+                });
+                return;
+            }
 
-				return;
-			}
+            console.log(err);
+            process.exit(1);
+        }
 
-			console.log(err);
-			process.exit(1);
-		}
+        communityInstance.getSteamUser(communityInstance.steamID, function (err, user) {
+            if (err) {
+                console.log('Could not get steam user: ' + err);
+                process.exit(1);
+            }
+            console.log("Logged on as " + accountName + "...");
 
-		// console.log("Getting steam user...")
-		community.getSteamUser(community.steamID, function (err, user) {
-			if (err) {
-				console.log('Could not get steam user: ' + err);
-				process.exit(1);
-			}
-			console.log("Logged on as " + accountName + "...");
+            // Set status for commenting if enabled
+            if (config.features.auto_group_comment) {
+                updateOnlineStatus();
+            }
 
-			// Start game idling if enabled
-			if (config.features.idle_games || config.features.idle_multiple_games) {
-				startIdling(community);
-			}
+            // Start game idling if enabled
+            if (config.features.idle_games || config.features.idle_multiple_games) {
+                startIdling(communityInstance);
+            }
 
-			// JOIN UNLISTED GROUPS IF CONFIGURED
-			if (config.join_unlisted_groups) {
-				const userGroupIds = user.groups.map(g => g.getSteamID64());
+            // JOIN UNLISTED GROUPS IF CONFIGURED
+            if (config.join_unlisted_groups) {
+                const userGroupIds = user.groups.map(g => g.getSteamID64());
 
-				console.log("Checking unlisted groups... Est. time: " + ((config.group_post_delay * config.groups.length) / 60).toFixed(1) + " min");
-				let itemsProcessed = 0;
-				config.groups.forEach((gid, i) => {
-					setTimeout(() => {
-						community.getSteamGroup(gid, function (err, group) {
-							if (err) {
-								console.log(`Could not get steam group: ${err}`);
-								return;
-							}
-							// Check if user is already in group
-							if (userGroupIds.includes(String(group.steamID))) {
-								console.log(`Already in group (${i + 1}/${config.groups.length}): ${gid}`);
-							} else {
-								community.joinGroup(group.steamID, (err) => {
-									if (err) {
-										console.log(`Could NOT JOIN group (${i + 1}/${config.groups.length}) ${gid}: ${err}`);
-									} else {
-										console.log(`Joined group (${i + 1}/${config.groups.length}): ${gid}`);
-									}
-								});
-							}
-						});
-					}, (config.group_join_delay * i) * 1000);
-				});
-			}
+                console.log("Checking unlisted groups... Est. time: " + ((config.group_post_delay * config.groups.length) / 60).toFixed(1) + " min");
+                let itemsProcessed = 0;
+                config.groups.forEach((gid, i) => {
+                    setTimeout(() => {
+                        communityInstance.getSteamGroup(gid, function (err, group) {
+                            if (err) {
+                                console.log(`Could not get steam group: ${err}`);
+                                return;
+                            }
+                            // Check if user is already in group
+                            if (userGroupIds.includes(String(group.steamID))) {
+                                console.log(`Already in group (${i + 1}/${config.groups.length}): ${gid}`);
+                            } else {
+                                communityInstance.joinGroup(group.steamID, (err) => {
+                                    if (err) {
+                                        console.log(`Could NOT JOIN group (${i + 1}/${config.groups.length}) ${gid}: ${err}`);
+                                    } else {
+                                        console.log(`Joined group (${i + 1}/${config.groups.length}): ${gid}`);
+                                    }
+                                });
+                            }
+                        });
+                    }, (config.group_join_delay * i) * 1000);
+                });
+            }
 
-			// Start group commenting if enabled
-			if (config.features.auto_group_comment) {
-			console.log("Starting group post interval...")
+            // Start group commenting if enabled
+            if (config.features.auto_group_comment) {
+                console.log("Starting group post interval...")
 
-			try {
-				run(community, config.interval, config.groups, config.message);
-			} catch (e) {
-					console.log("An error occurred in the run function: %j", e);
-					if (tgBot) {
-						tgBot.sendMessage(config.tg_chat_id, "Critical error occurred in the run function: %j" + String(e));
-					}
-				process.exit(1);
-				}
-			}
+                try {
+                    run(communityInstance, config.interval, config.groups, config.message);
+                } catch (e) {
+                    console.log("An error occurred in the run function: %j", e);
+                    if (tgBot) {
+                        tgBot.sendMessage(config.tg_chat_id, "Critical error occurred in the run function: %j" + String(e));
+                    }
+                    process.exit(1);
+                }
+            }
 
-			// Add status message for combined features
-			if (config.features.auto_group_comment && (config.features.idle_games || config.features.idle_multiple_games)) {
-				console.log("\nRunning both features:");
-				console.log("- Auto Group Commenter: Active");
-				console.log("- Game Idling: Active");
-				console.log("Use option 5 in the menu to stop idling at any time.");
-			}
-		});
-	});
+            // Add status message for combined features
+            if (config.features.auto_group_comment && (config.features.idle_games || config.features.idle_multiple_games)) {
+                console.log("\nRunning both features:");
+                console.log("- Auto Group Commenter: Active");
+                console.log("- Game Idling: Active");
+                console.log("Use option 5 in the menu to stop idling at any time.");
+            }
+        });
+    });
 }
 
 
@@ -724,6 +776,121 @@ function configureFriendRequests() {
                 configureFriendRequests();
         }
     });
+}
+
+// Add new menu system
+function showMenu() {
+    isMenuActive = true;
+    // Clear the status line before showing menu
+    if (isIdling) {
+        process.stdout.write('\r\x1b[K');
+    }
+
+    console.log("\n=== Darkjoyless Steam Bot Menu ===");
+    console.log("1. Auto Group Commenter");
+    console.log("2. Idle Single Game");
+    console.log("3. Idle Multiple Games");
+    console.log("4. Run Both (Auto Comment + Idle)");
+    console.log("5. Stop Idling (if active)");
+    console.log("6. Configure Saved Games");
+    console.log("7. Configure Friend Requests");
+    console.log("8. Configure Online Status");
+    console.log("9. Check Idle Status");
+    console.log("10. Exit");
+    console.log("\nPress 'M' at any time to return to this menu");
+    
+    rl.question("\nSelect an option (1-10): ", function(choice) {
+        isMenuActive = false;
+        // Force an immediate status update when returning from menu
+        if (isIdling) {
+            displayIdleStatus();
+        }
+
+        switch(choice) {
+            case "1":
+                config.features.auto_group_comment = true;
+                config.features.idle_games = false;
+                config.features.idle_multiple_games = false;
+                startBot();
+                break;
+            case "2":
+                config.features.auto_group_comment = false;
+                config.features.idle_games = true;
+                config.features.idle_multiple_games = false;
+                if (config.features.use_saved_games && config.saved_games.single_game) {
+                    console.log(`Using saved single game: ${config.saved_games.single_game}`);
+                    config.games_to_idle = [config.saved_games.single_game];
+                    startBot();
+                } else {
+                    rl.question("Enter the AppID of the game to idle: ", function(appId) {
+                        config.games_to_idle = [parseInt(appId)];
+                        startBot();
+                    });
+                }
+                break;
+            case "3":
+                config.features.auto_group_comment = false;
+                config.features.idle_games = false;
+                config.features.idle_multiple_games = true;
+                if (config.features.use_saved_games && config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
+                    console.log(`Using saved multiple games: ${config.saved_games.multiple_games.join(', ')}`);
+                    config.games_to_idle = config.saved_games.multiple_games;
+                    startBot();
+                } else {
+                    rl.question("Enter AppIDs separated by commas: ", function(appIds) {
+                        config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
+                        startBot();
+                    });
+                }
+                break;
+            case "4":
+                config.features.auto_group_comment = true;
+                config.features.idle_games = true;
+                config.features.idle_multiple_games = true;
+                if (config.features.use_saved_games && config.saved_games.multiple_games && config.saved_games.multiple_games.length > 0) {
+                    console.log(`Using saved multiple games: ${config.saved_games.multiple_games.join(', ')}`);
+                    config.games_to_idle = config.saved_games.multiple_games;
+                    startBot();
+                } else {
+                    rl.question("Enter AppIDs separated by commas: ", function(appIds) {
+                        config.games_to_idle = appIds.split(',').map(id => parseInt(id.trim()));
+                        startBot();
+                    });
+                }
+                break;
+            case "5":
+                stopIdling();
+                break;
+            case "6":
+                configureSavedGames();
+                break;
+            case "7":
+                configureFriendRequests();
+                break;
+            case "8":
+                configureOnlineStatus();
+                break;
+            case "9":
+                checkIdleStatus();
+                break;
+            case "10":
+                console.log("Exiting...");
+                process.exit(0);
+                break;
+            default:
+                console.log("Invalid option. Please try again.");
+                showMenu();
+        }
+    });
+}
+
+function startBot() {
+    if (config.username && config.password) {
+        console.log("Starting authentication for " + config.username + "...");
+        doLogin(config.username, config.password);
+    } else {
+        console.log("Invalid config for user " + config.username);
+    }
 }
 
 // Modify the main execution to show menu first

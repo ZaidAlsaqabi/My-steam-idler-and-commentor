@@ -5,10 +5,9 @@
   \___ \   | |  |  __|   / /\ \ | |\/| | |  _ <| |  | | | |   
   ____) |  | |  | |____ / ____ \| |  | | | |_) | |__| | | |   
  |_____/   |_|  |______/_/    \_\_|  |_| |____/ \____/  |_|  
-                       D A R K J O Y L E S S
- 
-                                                              
-                                                              
+                   D A R K J O Y L E S S v1
+                                                                                                        
+  
   Has been started! 
   Please authenticate when prompted.
 

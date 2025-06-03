@@ -21,5 +21,6 @@
         "single_game": 730,
         "multiple_games": [730, 440, 570]
     },
-    "games_to_idle": []
+    "games_to_idle": [],
+    "online_status": "Online"
 }
