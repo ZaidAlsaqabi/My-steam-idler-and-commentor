@@ -1,4 +1,4 @@
-# Darkjoyless Steam Bot
+# Darkjoyless Steam Bot Version 1.0.0.3
 
 Local Node.js Steam bot for **game idling**, **group comments**, and **friend comments**. Configure once, then control everything from a colored terminal menu.
 
