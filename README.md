@@ -107,22 +107,6 @@ Copy from the template; do not commit a filled `config.json`.
 - In `config.json`: `groups` / `group_names` (include), `groups_excluded` / `group_names_excluded` (skip)
 - `config/steam-refresh.token` — encrypted Steam session (created after first login)
 
-Optional environment variable: `CONFIG_MASTER_KEY` (encryption key). If unset, the default key in `util/encrypt.js` is used. Change that default if you share the machine.
-
-## What not to commit
-
-These are gitignored on purpose:
-
-- `config/config.json` (encrypted username/password still count as secrets)
-- `config/steam-refresh.token`
-- `config/group-cache.json`
-- `log.txt`
-- `node_modules/`
-
-## Rate limits
-
-The group commenter does not load group pages on steamcommunity.com. If a **comment post** returns 429, the bot pauses and retries. Leave the window open. **M** still stops commenters. If login is rate-limited (`RateLimitExceeded`), wait 20–30 minutes and try once.
-
 ## License
 
 Apache License 2.0. See `LICENSE`.
