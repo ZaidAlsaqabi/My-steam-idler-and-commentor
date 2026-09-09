@@ -25,7 +25,6 @@ Repository: [ZaidAlsaqabi/My-steam-idler-and-commentor](https://github.com/ZaidA
 ### Other comments
 - Friend commenter (optional; not started by idle)
 - Group + friend commenters together
-- On HTTP 429 when **posting**: pause and retry. **M** stops comments without stopping idle
 
 ### Login and security
 - Steam Guard is asked **once**; a refresh token is saved so later starts skip the authenticator
@@ -43,7 +42,6 @@ Repository: [ZaidAlsaqabi/My-steam-idler-and-commentor](https://github.com/ZaidA
 ### Other
 - Auto-accept friend requests (optional)
 - Online / Invisible status
-- Optional Telegram alerts if you set a bot token
 
 ## Requirements
 
