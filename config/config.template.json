@@ -1,8 +1,9 @@
 {
-    "interval": 3600,
+    "interval": 28800,
     "tg_bot_token": null,
     "tg_chat_id": null,
     "group_post_delay": 20,
+    "friend_post_delay": 60,
     "group_join_delay": 10,
     "anti_spam_count": 5,
     "join_unlisted_groups": false,
@@ -10,17 +11,21 @@
     "username": null,
     "password": null,
     "groups": [],
+    "group_names": [],
+    "groups_excluded": [],
+    "group_names_excluded": [],
     "features": {
         "auto_group_comment": true,
+        "auto_friend_comment": false,
         "idle_games": false,
         "idle_multiple_games": false,
         "use_saved_games": false,
         "auto_accept_friends": false
     },
+    "friends_excluded": [],
     "saved_games": {
         "single_game": 730,
         "multiple_games": [730, 440, 570]
     },
-    "games_to_idle": [],
-    "online_status": "Online"
+    "games_to_idle": []
 }

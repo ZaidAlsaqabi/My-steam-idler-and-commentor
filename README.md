@@ -1,134 +1,128 @@
 # Darkjoyless Steam Bot
 
-A powerful Steam bot that combines game idling and group commenting capabilities with additional features like friend request handling and online status management.
+Local Node.js Steam bot for **game idling**, **group comments**, and **friend comments**. Configure once, then control everything from a colored terminal menu.
+
+Repository: [ZaidAlsaqabi/My-steam-idler-and-commentor](https://github.com/ZaidAlsaqabi/My-steam-idler-and-commentor)
 
 ## Features
 
-### Core Features
-- **Auto Group Commenter**: Automatically posts comments to Steam groups at configurable intervals
-- **Game Idling**: Idle single or multiple games to earn cards and XP
-- **Combined Operation**: Run both idling and commenting simultaneously
+### Group commenter (main)
+- Posts to groups **this Steam account is in**, using group IDs from the Steam client after login
+- Does **not** look up groups on steamcommunity.com (that path is rate-limited)
+- Configure **Ignore any Groups?** to skip groups you do not want
+  - `config.groups` = include list (groups you kept)
+  - `config.groups_excluded` = never posted to
+- When a full round finishes: **Posted on all N groups.**
+- Sequential posts with a delay between groups (at least 30 seconds)
 
-### Enhanced Features
-- **Real-time Status Display**: Live updating status showing:
-  - Idle time
-  - Current game(s)
-  - Online status
-- **Friend Request Management**:
-  - Auto-accept friend requests
-  - Display Steam names of requesters
-  - Timestamp logging
-  - Telegram notifications
-- **Online Status Control**:
-  - Set status to Online or Invisible
-  - Status applies to both idling and commenting sessions
-- **Saved Games Configuration**:
-  - Save favorite games for quick access
-  - Support for single and multiple games
-  - Game name display with AppIDs
+### Idling
+- Idle a single game or several games at once
+- Saved games for quick start (single + multiple AppIDs)
+- Live idle timer in the terminal
+- Idle keeps running when you open the menu or stop comments
+- Steam stays connected after you stop idling, so other menu tools still work
 
-### Anti-Spam Measures
-- Configurable delays between group joins and comments
-- Anti-spam checks before posting
-- Rate limiting to prevent Steam restrictions
+### Other comments
+- Friend commenter (optional; not started by idle)
+- Group + friend commenters together
+- On HTTP 429 when **posting**: pause and retry. **M** stops comments without stopping idle
 
-## Installation
+### Login and security
+- Steam Guard is asked **once**; a refresh token is saved so later starts skip the authenticator
+- Username and password are encrypted automatically when you configure or start the bot
+- Steam session token is encrypted with the same system
+- Menu saves write encrypted credentials back to disk (plaintext is only in memory)
 
-1. Clone the repository:
+### Terminal
+- Colored menu, status, success, warnings, and errors
+- Purple startup title
+- **M** — main menu (stops comments/groups, idle keeps running)
+- **S** — stop idling only
+- **Esc** — exit
+
+### Other
+- Auto-accept friend requests (optional)
+- Online / Invisible status
+- Optional Telegram alerts if you set a bot token
+
+## Requirements
+
+- Node.js
+- A Steam account (Steam Guard / authenticator for the first login)
+
+## Setup
+
 ```bash
-git clone https://github.com/yourusername/darkjoyless-steam-bot.git
-cd darkjoyless-steam-bot
-```
-
-2. Install dependencies:
-```bash
+git clone https://github.com/ZaidAlsaqabi/My-steam-idler-and-commentor.git
+cd My-steam-idler-and-commentor
 npm install
 ```
 
-3. Run the configuration script:
+Configure (encrypts username and password at the end by itself):
+
 ```bash
-node util/configure.js
+npm run configure-bot
 ```
 
-## Configuration
+Start:
 
-The bot can be configured through the interactive menu or by editing `config/config.json` directly.
-
-### Menu Options
-1. Auto Group Commenter
-2. Idle Single Game
-3. Idle Multiple Games
-4. Run Both (Auto Comment + Idle)
-5. Stop Idling (if active)
-6. Configure Saved Games
-7. Configure Friend Requests
-8. Configure Online Status
-9. Check Idle Status
-10. Exit
-
-### Key Features Configuration
-- **Friend Requests**: Toggle auto-accept and view settings
-- **Online Status**: Choose between Online and Invisible modes
-- **Saved Games**: Save and manage favorite games for quick access
-- **Group Commenting**: Set intervals and messages
-- **Game Idling**: Configure single or multiple game idling
-
-## Usage
-
-1. Start the bot:
 ```bash
-node bot.js
+npm run start-bot
 ```
 
-2. Use the menu to:
-   - Start/stop features
-   - Configure settings
-   - Check status
-   - Manage friend requests
-   - Control online status
+First start may ask for a Steam Guard code **once**. After that, the encrypted session is reused until it expires.
 
-3. Press 'M' at any time to return to the main menu
+## Menu
 
-## Status Display
+| Key | Action |
+| --- | --- |
+| 1 | Group commenter (groups on this Steam account) |
+| 2 | Idle single game (idle only) |
+| 3 | Idle multiple games (idle only) |
+| 4 | Group commenter + friend commenter |
+| 5 | Stop idling |
+| 6 | Configure saved games |
+| 7 | Friend request settings |
+| 8 | Online status |
+| 9 | Friend commenter only |
+| 10 | Check idle status |
+| 11 | Stop comments/groups (keep idling) |
+| 12 | Exit |
 
-The bot provides real-time status updates showing:
-- Current idle time
-- Active game(s)
-- Online status
+Shortcuts while the bot is running (not while typing a Steam Guard code):
 
-Status can be viewed:
-- During normal operation
-- Through the Check Idle Status option
-- With live updates in both modes
+| Key | Action |
+| --- | --- |
+| **M** | Main menu; stops comments/groups; idle continues |
+| **S** | Stop idling |
+| **Esc** | Exit |
 
-## Telegram Integration
+## Config
 
-Configure Telegram notifications for:
-- Friend request events
-- Group commenting status
-- Error alerts
+Copy from the template; do not commit a filled `config.json`.
 
-## Security
+- `config/config.template.json` — structure and defaults
+- `config/message.txt` — group comment text (used if `message` is null)
+- `config/friendcomment.txt` — friend comment text
+- In `config.json`: `groups` / `group_names` (include), `groups_excluded` / `group_names_excluded` (skip)
+- `config/steam-refresh.token` — encrypted Steam session (created after first login)
 
-- Steam Guard support
-- Secure credential storage
-- Rate limiting protection
-- Anti-spam measures
+Optional environment variable: `CONFIG_MASTER_KEY` (encryption key). If unset, the default key in `util/encrypt.js` is used. Change that default if you share the machine.
 
-## Contributing
+## What not to commit
 
-Feel free to submit issues and enhancement requests!
+These are gitignored on purpose:
+
+- `config/config.json` (encrypted username/password still count as secrets)
+- `config/steam-refresh.token`
+- `config/group-cache.json`
+- `log.txt`
+- `node_modules/`
+
+## Rate limits
+
+The group commenter does not load group pages on steamcommunity.com. If a **comment post** returns 429, the bot pauses and retries. Leave the window open. **M** still stops commenters. If login is rate-limited (`RateLimitExceeded`), wait 20–30 minutes and try once.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues and feature requests, please use the GitHub issue tracker.
-
-## Acknowledgments
-
-- Steam Community API
-- Node.js community
-- All contributors and users
+Apache License 2.0. See `LICENSE`.

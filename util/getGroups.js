@@ -18,29 +18,38 @@ rl.question("Steam User ID: ", function (userId) {
             process.exit(1);
         }
 
-        console.log("Fetching " + user.groups.length + " Groups for: " + user.name + "\n");
+        const xmlGroups = (user && Array.isArray(user.groups)) ? user.groups : [];
+        console.log("Fetching " + xmlGroups.length + " Groups for: " + user.name + "\n");
 
         var groups = new Array;
         var errors = 0;
         // Build an array of groups using for loop:
-        console.log("User Groups:", user.groups);
-        const userGroupIds = user.groups.map(group => group.getSteamID64());
+        console.log("User Groups:", xmlGroups);
+        const userGroupIds = xmlGroups.map(group => group.getSteamID64());
 
         console.log("User Group IDS: ", userGroupIds)
 
-        for (var i = 0; i < user.groups.length; i++) {
-            community.getSteamGroup(user.groups[i], function (err, group) {
-                if (err) {
+        if (!xmlGroups.length) {
+            console.log("Steam profile XML did not include groups for this user.");
+            process.exit(0);
+        }
+
+        for (var i = 0; i < xmlGroups.length; i++) {
+            community.getSteamGroup(xmlGroups[i], function (err, group) {
+                if (err || !group) {
                     console.log('Could not get steam group: ' + err);
-                    // process.exit(1);
                     errors++;
+                    if (groups.length == (xmlGroups.length - errors)) {
+                        console.log(JSON.stringify(groups));
+                    }
+                    return;
                 }
                 groups.push(group.url);
                 console.log("Group ID: " + group.url + " | Group Name: " + group.name + " | Group ID: " + group.steamID);
                 console.log(userGroupIds.includes(String(group.steamID)))
 
                 // When the array is full, print it out:
-                if (groups.length == (user.groups.length - errors)) {
+                if (groups.length == (xmlGroups.length - errors)) {
                     console.log(JSON.stringify(groups));
                 }
             });

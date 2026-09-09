@@ -8,11 +8,12 @@
     "configure-bot": "node ./util/configure",
     "start-bot": "node ./bot"
   },
-  "dependencies": {
+    "dependencies": {
     "steamcommunity": "^3.45.0",
     "node-telegram-bot-api": "^0.61.0",
     "node-fetch": "^2.6.7",
     "steam-user": "^4.25.0",
+    "steam-session": "^1.9.3",
     "prompt-sync": "^4.2.0"
   }
 }

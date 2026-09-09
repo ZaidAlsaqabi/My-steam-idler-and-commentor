@@ -1,0 +1,11 @@
+node_modules/
+log.txt
+.env
+.env.*
+
+# Login secrets — never commit these
+config/config.json
+config/config.backup.json
+config/steam-refresh.token
+config/group-cache.json
+*.token
